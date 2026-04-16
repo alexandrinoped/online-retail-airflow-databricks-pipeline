@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+airflow.db
+logs/
+.ipynb_checkpoints/
+.DS_Store
+.pytest_cache/
+.mypy_cache/
+.vscode/
