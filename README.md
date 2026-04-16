@@ -18,106 +18,94 @@ O objetivo é ingerir dados brutos em CSV, aplicar transformações e regras de 
 
 ## Arquitetura
 
-```text
 Fonte CSV (Kaggle)
-    ↓
+↓
 Upload do arquivo para o Databricks Workspace
-    ↓
+↓
 Notebook Bronze no Databricks
-    ↓
+↓
 Notebook Silver no Databricks
-    ↓
+↓
 Notebook Gold no Databricks
-    ↓
+↓
 Tabelas Delta para consumo analítico
 
-Orquestração
-
+### Orquestração
 O Apache Airflow é responsável por orquestrar a execução do pipeline.
 
-Processamento
-
+### Processamento
 O Databricks é responsável por executar as transformações em Spark e persistir as camadas Bronze, Silver e Gold.
 
-Execução do Pipeline
-
+### Execução do Pipeline
 O Airflow dispara um Job no Databricks, que executa as etapas em sequência:
+1. Bronze
+2. Silver
+3. Gold
 
-Bronze
-Silver
-Gold
-Dataset
-
+## Dataset
 O dataset contém registros transacionais de varejo online, com colunas como:
+- Invoice / InvoiceNo
+- StockCode
+- Description
+- Quantity
+- InvoiceDate
+- Price / UnitPrice
+- Customer ID / CustomerID
+- Country
 
-Invoice / InvoiceNo
-StockCode
-Description
-Quantity
-InvoiceDate
-Price / UnitPrice
-Customer ID / CustomerID
-Country
-Regras de Negócio
-Quantity > 0 e UnitPrice > 0: venda válida
-Quantity < 0: devolução
-InvoiceNo iniciando com "C": cancelamento
-CustomerID nulo: cliente não identificado
-Description nula: item inconsistente
-total_amount = Quantity * UnitPrice
-Camadas do Pipeline
-Bronze
+## Regras de Negócio
+- `Quantity > 0` e `UnitPrice > 0`: venda válida
+- `Quantity < 0`: devolução
+- `InvoiceNo` iniciando com `"C"`: cancelamento
+- `CustomerID` nulo: cliente não identificado
+- `Description` nula: item inconsistente
+- `total_amount = Quantity * UnitPrice`
 
+## Camadas do Pipeline
+
+### Bronze
 A camada Bronze realiza a ingestão do arquivo CSV bruto, adicionando metadados técnicos como:
-
-ingestion_timestamp
-source_file
+- `ingestion_timestamp`
+- `source_file`
 
 Saída gerada:
+- `default.bronze_online_retail_raw`
 
-default.bronze_online_retail_raw
-Silver
-
+### Silver
 A camada Silver realiza:
-
-padronização de tipos
-tratamento de preço com vírgula decimal
-criação da coluna total_amount
-classificação dos registros em:
-Sale
-Return
-Cancelled
-Invalid
-identificação de cliente e item
+- padronização de tipos
+- tratamento de preço com vírgula decimal
+- criação da coluna `total_amount`
+- classificação dos registros em:
+  - `Sale`
+  - `Return`
+  - `Cancelled`
+  - `Invalid`
+- identificação de cliente e item
 
 Saída gerada:
+- `default.silver_online_retail_clean`
 
-default.silver_online_retail_clean
-Gold
-
+### Gold
 A camada Gold gera três tabelas analíticas:
 
-default.gold_fact_sales
-
+#### `default.gold_fact_sales`
 Tabela fato contendo apenas transações classificadas como venda válida.
 
-default.gold_dim_customer
-
+#### `default.gold_dim_customer`
 Tabela dimensional de clientes com:
+- primeira compra
+- última compra
+- total de pedidos
+- receita total
 
-primeira compra
-última compra
-total de pedidos
-receita total
-default.gold_agg_rfm_customer
-
+#### `default.gold_agg_rfm_customer`
 Tabela analítica com métricas de:
+- Recência
+- Frequência
+- Monetização
 
-Recência
-Frequência
-Monetização
-
-Estrutura do Projeto
+## Estrutura do Projeto
 
 online-retail-airflow-databricks-pipeline/
 │
@@ -141,57 +129,53 @@ online-retail-airflow-databricks-pipeline/
 └── data/
     └── raw/
 
-Papel de Cada Componente
-dags/
+## Papel de Cada Componente
 
+### `dags/`
 Contém a DAG do Airflow responsável por disparar o Job do Databricks.
 
-notebooks/
-
+### `notebooks/`
 Contém a lógica das etapas Bronze, Silver e Gold adaptadas para execução no Databricks.
 
-docs/
-
+### `docs/`
 Contém a documentação complementar do projeto:
+- arquitetura
+- regras de negócio
+- dicionário de dados
 
-arquitetura
-regras de negócio
-dicionário de dados
-src/
+### `src/`
+Mantido como apoio de desenvolvimento e organização do repositório.
 
-Mantido como apoio de desenvolvimento e organização inicial do projeto. A execução principal do pipeline ocorre no Databricks, por meio dos notebooks Bronze, Silver e Gold.
-
-data/raw/
-
+### `data/raw/`
 Mantido como referência local do arquivo de origem utilizado no projeto.
 
-Stack Utilizada
-Python
-PySpark
-Apache Airflow
-Databricks
-Delta Lake
-Arquitetura Medallion
-Orquestração com Airflow
+## Stack Utilizada
+- Python
+- PySpark
+- Apache Airflow
+- Databricks
+- Delta Lake
+- Arquitetura Medallion
 
-A DAG no Airflow utiliza o operador DatabricksRunNowOperator para disparar o Job criado no Databricks.
+## Orquestração com Airflow
+A DAG no Airflow utiliza o operador `DatabricksRunNowOperator` para disparar o Job criado no Databricks.
 
 Com isso:
+- o Airflow não processa os dados diretamente
+- o Airflow coordena a execução
+- o Databricks executa o pipeline
 
-o Airflow não processa os dados diretamente
-o Airflow coordena a execução
-o Databricks executa o pipeline
-Resultado Final
-
+## Resultado Final
 O projeto foi executado com sucesso com a seguinte arquitetura:
 
-Airflow disparando o pipeline
-Databricks executando Bronze, Silver e Gold
-tabelas analíticas persistidas no Databricks em formato Delta
-Próximas Evoluções
-parametrização do pipeline
-ingestão incremental
-testes automatizados de qualidade
-monitoramento e alertas
-integração com storage em nuvem
-evolução para catálogos e governança mais robusta
+- Airflow disparando o pipeline
+- Databricks executando Bronze, Silver e Gold
+- tabelas analíticas persistidas no Databricks em formato Delta
+
+## Próximas Evoluções
+- parametrização do pipeline
+- ingestão incremental
+- testes automatizados de qualidade
+- monitoramento e alertas
+- integração com storage em nuvem
+- evolução para catálogos e governança mais robusta
