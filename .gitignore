@@ -9,3 +9,4 @@ logs/
 .pytest_cache/
 .mypy_cache/
 .vscode/
+data/raw/online_retail.csv
