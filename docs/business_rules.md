@@ -1,28 +1,49 @@
-# Arquitetura
+# Regras de Negócio
 
-Este projeto segue uma arquitetura em camadas inspirada no padrão medallion.
+## Classificação dos Registros
 
-## Fluxo
-CSV bruto → Bronze → Silver → Gold
+### Venda Válida
+Um registro é considerado uma venda válida quando:
+- `Quantity > 0`
+- `UnitPrice > 0`
+- `InvoiceNo` não começa com `"C"`
 
-## Componentes
+### Devolução
+Um registro é classificado como devolução quando:
+- `Quantity < 0`
 
-### Fonte
-Dataset em CSV armazenado na pasta `data/raw`.
+### Cancelamento
+Um registro é classificado como cancelamento quando:
+- `InvoiceNo` começa com `"C"`
 
-### Airflow
-Responsável pela orquestração do pipeline, controle de dependências entre tarefas, tentativas de reexecução e agendamento.
+### Cliente Não Identificado
+Um registro é marcado como cliente não identificado quando:
+- `CustomerID` é nulo
 
-### Databricks
-Responsável pela leitura, transformação, validação e persistência dos dados em cada camada.
+### Item Inconsistente
+Um registro é marcado como item inconsistente quando:
+- `Description` é nula
 
-## Camadas
+## Campos Derivados
 
-### Bronze
-Armazena os dados brutos ingeridos, com metadados técnicos e mínimas alterações.
+### total_amount
+Campo calculado como:
 
-### Silver
-Contém os dados tratados, padronizados e classificados de acordo com regras de negócio.
+`Quantity * UnitPrice`
 
-### Gold
-Contém os dados analíticos prontos para consumo, consulta e geração de insights.
+### invoice_status
+Classificação final do registro:
+- `Sale`
+- `Return`
+- `Cancelled`
+- `Invalid`
+
+### customer_status
+Classificação do cliente:
+- `Identified`
+- `Unidentified`
+
+### item_status
+Classificação do item:
+- `Valid`
+- `Inconsistent`
